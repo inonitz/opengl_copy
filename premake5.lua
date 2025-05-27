@@ -130,7 +130,7 @@ end
 
 
 
--- try to use these generic functions to include & link every project, right now the only ones popping up on program is glfw (also for awc2 ...)
+-- try to use these generic functions to include & link every project
 IncludeProjectHeaders = function(ProjectName)
     includedirs { ROOT_PATH("projects/" .. ProjectName .. "/include") }
 end
@@ -139,6 +139,11 @@ LinkProjectLibrary = function(ProjectName)
     links { ProjectName }
     filter {}
 end
+
+IncludeDependencyHeaders = function(ProjectName)
+    includedirs { ROOT_PATH("dependencies/" .. ProjectName .. "/include") }
+end
+
 
 
 LinkGladLibrary = function()

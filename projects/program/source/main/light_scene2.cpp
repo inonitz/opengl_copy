@@ -1,6 +1,9 @@
 #include "Shader.h"
 #include "Buffers.h"
 #include "Camera.h"
+#include <glm/ext/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
 
 static Array<float> verts_cube =
 {
@@ -95,13 +98,13 @@ int light_scene2()
 
 	CameraFPS cam_(window);
 
-	mat4
-		model,
+	glm::mat4x4
+		cube_model,
 		transform,
-		l_model,
+		light_model,
 		tmp,
 		tmp2;
-	vec3
+	glm::vec3
 		angle_axis{ 0.5f, 1.0f, 0.0f },
 		trs{0.0f},
 		light_col{1.0f},
@@ -126,8 +129,13 @@ int light_scene2()
 	Texture2D tex0("Assets/default.jpg", { texarg::MIPMAP_NEAREST_GL_NEAREST, texarg::MIPMAP_NEAREST_GL_NEAREST, texarg::REPEAT, texarg::REPEAT },  true);
 
 
-	TS(light_pos, { 0.5f }, &l_model);
-	RotateAroundAxis(angle_axis, 0, &model);
+
+	light_model = glm::identity<glm::mat4x4>();
+	light_model = glm::translate(light_model, light_pos);
+	light_model = glm::scale(light_model, glm::vec3{0.5f});
+
+	cube_model = glm::identity<glm::mat4x4>();
+	cube_model = glm::rotate(cube_model, 0.0f, angle_axis);
 
 	while (!window.shouldClose())
 	{
@@ -137,41 +145,40 @@ int light_scene2()
 		cam_.update();
 
 		// calculate normal matrix
-		Matrix4x4Multiply(cam_.getView(), &model, &tmp2);
-		tmp2.inverse(&tmp);
-		tmp = tmp.transpose();
+		tmp2 = cam_.getView() * cube_model;
+		tmp  = glm::inverse(tmp2);
+		tmp  = glm::transpose(tmp);
 
 		// draw textured cube 1
 		cube_shader.use();
 		cube_buffer.bindVAO();
 		cube_shader.setUniform1i("u_texture", 0);
 
-		cube_shader.setUniformMat4("model",       model				  );
-		cube_shader.setUniformMat4("view",       *cam_.getView()      );
-		cube_shader.setUniformMat4("projection", *cam_.getProjection());
-		cube_shader.setUniformMat4("transform_nrml", tmp);
+		cube_shader.setUniformMat4("model",      glm::value_ptr(cube_model));
+		cube_shader.setUniformMat4("view",       glm::value_ptr(cam_.getView()      ));
+		cube_shader.setUniformMat4("projection", glm::value_ptr(cam_.getProjection()));
+		cube_shader.setUniformMat4("transform_nrml", glm::value_ptr(tmp));
 
-		cube_shader.setUniform3f("Li_c", light_col);
-		cube_shader.setUniform3f("Li_p", light_pos);
-		cube_shader.setUniform3f("cam_p", cam_.position);
+		cube_shader.setUniform3f("Li_c", glm::value_ptr(light_col));
+		cube_shader.setUniform3f("Li_p", glm::value_ptr(light_pos));
+		cube_shader.setUniform3f("cam_p", glm::value_ptr(cam_.position));
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 
 
 		// draw "light" cube 2
 		light_shader.use();
 		light_buffer.bindVAO();
-		light_shader.setUniformMat4("model",		l_model				 );
-		light_shader.setUniformMat4("view",			*cam_.getView()		 );
-		light_shader.setUniformMat4("projection",   *cam_.getProjection());
-
-		light_shader.setUniform3f("u_col", light_col);
+		light_shader.setUniformMat4("model",	  glm::value_ptr(light_model));
+		light_shader.setUniformMat4("view",       glm::value_ptr(cam_.getView()      ));
+		light_shader.setUniformMat4("projection", glm::value_ptr(cam_.getProjection()));
+		light_shader.setUniform3f("u_col", glm::value_ptr(light_col));
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 
 
 		// update 
-		translate(trs, &tmp2);
-		RotateAroundAxis(angle_axis, window.timeElapsed, &tmp);
-		Matrix4x4Multiply(&tmp2, &tmp, &model);
+		tmp2 = glm::translate(glm::identity<glm::mat4x4>(), trs);
+		tmp  = glm::rotate(cube_model, window.timeElapsed, angle_axis);
+		cube_model = tmp2 * tmp;
 	}
 };
 

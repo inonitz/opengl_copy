@@ -1,20 +1,23 @@
 #pragma once
+#include <Windows.h>
+#include <glm/ext/matrix_transform.hpp>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-#include <Windows.h>
+#include "ResourceManager.h"
 
 
 inline void framebuffer_size_callback(GLFWwindow* window, int width, int height) { glViewport(0, 0, width, height); }
 
 struct MouseCoords
 {
-	double_t x, y;
+	double x, y;
 	MouseCoords() : x(0.0f), y(0.0f) {}
 	MouseCoords(
-		const double& x, 
-		const double& y
+		double x, 
+		double y
 	) : x(x), y(y) {}
 };
+
 
 class Window
 {
@@ -23,13 +26,13 @@ private:
 	int32_t m_height;
 	int32_t m_width;
 
-	vec4    ScreenColor{ 0.7f, 0.7f, 0.7f, 1.0f };
+	glm::vec4 ScreenColor{ 0.7f, 0.7f, 0.7f, 1.0f };
 public:
 	MouseCoords m_mousePos;
-	float_t timeElapsed;
-	float_t frameCount;
-	float_t t0, t1, dt;
-	Window(const int32_t& w, const int32_t& h, bool GL_CORE = false) : m_width(w), m_height(h), timeElapsed(0.0f), frameCount(0.0f)
+	float timeElapsed;
+	float frameCount;
+	float t0, t1, dt;
+	Window(const int32_t& w, const int32_t& h, bool GL_CORE = false) : m_height(h), m_width(w), timeElapsed(0.0f), frameCount(0.0f)
 	{
 		glfwInit();
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
@@ -43,7 +46,7 @@ public:
 			glfwTerminate();
 			ERR_EXIT("Failed to Create GLFW window");
 		}
-		t0 = (float_t)glfwGetTime();
+		t0 = (float)glfwGetTime();
 
 		glfwMakeContextCurrent(window);
 		glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
@@ -53,7 +56,7 @@ public:
 			ERR_EXIT("Failed to initialize GLAD");
 		}
 
-		t1 = (float_t)glfwGetTime();
+		t1 = (float)glfwGetTime();
 		dt = t1 - t0;
 		t0 = t1;
 		m_handle = window;
@@ -74,26 +77,26 @@ public:
 		glfwSetCursorPos(m_handle, x, y);
 	}
 
-	inline void   setClearColor(const vec4& col)
+	inline void   setClearColor(glm::vec4 col)
 	{
 		ScreenColor = col;
-		glClearColor(col.x, col.y, col.z, col.w);
+		glClearColor(ScreenColor.x, ScreenColor.y, ScreenColor.z, ScreenColor.w);
 	}
-	inline void   setClearColor(const vec3& col)
+	inline void   setClearColor(glm::vec3 col)
 	{
-		ScreenColor.set(col.x, col.y, col.z, 1.0f);
-		glClearColor(col.x, col.y, col.z, col.w);
+		ScreenColor = glm::vec4{col, 1.0f};
+		glClearColor(ScreenColor.x, ScreenColor.y, ScreenColor.z, ScreenColor.w);
 	}
 
 	inline float  deltaTime() { return dt; }
 	inline bool   keyPressed(const unsigned int& K) { return glfwGetKey(m_handle, K) == GLFW_PRESS; }
 	inline bool   shouldClose() { return glfwWindowShouldClose(m_handle); }
-	inline float  Width()  { return (float_t)m_width;  }
-	inline float  Height() { return (float_t)m_height; }
+	inline float  Width()  { return (float)m_width;  }
+	inline float  Height() { return (float)m_height; }
 	inline GLFWwindow* getHandle() { return m_handle;  }
 	inline void   update()
 	{
-		t1 = (float_t)glfwGetTime();
+		t1 = (float)glfwGetTime();
 		dt = t1 - t0;
 		t0 = t1;
 		timeElapsed += dt;

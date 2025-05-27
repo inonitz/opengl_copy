@@ -10,6 +10,7 @@ project "program"
     }
     -- Specify Include Headers
     includedirs { "include" }
+    IncludeDependencyHeaders("glm")
     IncludeProjectHeaders("glad")
     IncludeProjectHeaders("glfw34")
 

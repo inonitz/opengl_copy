@@ -1,6 +1,8 @@
 #pragma once
-#include "bhdr.h"
 #include "Window.h"
+#include <glm/ext/matrix_clip_space.hpp>
+#include <glm/ext/matrix_transform.hpp>
+
 
 enum class MOVEMENT_KEY 
 { 
@@ -57,29 +59,29 @@ private:
 	float Far;
 	float fov;
 
-	vec3 m_forward {0.0f, 0.0f, -1.0f};
-	vec3 m_up      {0.0f};
-	vec3 m_right   {0.0f};
+	glm::vec3 m_forward {0.0f, 0.0f, -1.0f};
+	glm::vec3 m_up      {0.0f};
+	glm::vec3 m_right   {0.0f};
 public:
-	vec3 position;
-	vec3 world_up;
-	mat4 CameraTransform; // view matrix
-	mat4 ProjectionMatrix; // projection matrix.
+	glm::vec3 position;
+	glm::vec3 world_up;
+	glm::mat4x4 CameraTransform; // view matrix
+	glm::mat4x4 ProjectionMatrix; // projection matrix.
 
 	CameraFPS(Window& win): 
 		win_handle(&win),
 
-		position(0.0f, 0.0f, 3.0f),
-		world_up(0.0f, 1.0f, 0.0f),
-
 		m_firstPos(win.Width() / 2, win.Height() / 2),
 		m_pitch(0.0f),
+
 		m_yaw(0.0f),
 		m_vel(2.5f),
-
 		Near(0.1f),
 		Far(100.0f),
-		fov(rad(45))
+
+		fov(glm::radians(45.0f)),
+		position(0.0f, 0.0f, 3.0f),
+		world_up(0.0f, 1.0f, 0.0f)
 	{
 		updateCameraAxes();
 		glfwSetKeyCallback(win_handle->getHandle(), key_callback);
@@ -90,8 +92,8 @@ public:
 	CameraFPS(
 		Window& win,
 
-		vec3&& position,
-		vec3&& up,
+		glm::vec3&& position,
+		glm::vec3&& up,
 
 		const float& pitch,
 		const float& yaw,
@@ -103,17 +105,17 @@ public:
 	) :
 		win_handle(&win),
 
+		m_firstPos(win.Width() / 2, win.Height() / 2),
+		m_pitch(pitch),
+
+		m_yaw(yaw),
+		m_vel(vel),
+		Near(Near),
+		Far(Far),
+
+		fov(fov),
 		position(std::move(position)),
-		world_up(std::move(up)),
-
-		m_firstPos(win.Width() / 2, win.Height() / 2),
-		m_pitch(pitch),
-		m_yaw(yaw),
-		m_vel(vel),
-
-		Near(Near),
-		Far(Far),
-		fov(fov)
+		world_up(std::move(up))
 	{
 		updateCameraAxes();
 		glfwSetKeyCallback(win_handle->getHandle(), key_callback);
@@ -123,8 +125,8 @@ public:
 	CameraFPS(
 		Window& win,
 
-		vec3& position,
-		vec3& up,
+		glm::vec3& position,
+		glm::vec3& up,
 
 		const float& pitch,
 		const float& yaw,
@@ -136,17 +138,17 @@ public:
 	) :
 		win_handle(&win),
 
-		position(position),
-		world_up(up),
-
 		m_firstPos(win.Width() / 2, win.Height() / 2),
 		m_pitch(pitch),
+
 		m_yaw(yaw),
 		m_vel(vel),
-
 		Near(Near),
 		Far(Far),
-		fov(fov)
+
+		fov(fov),
+		position(position),
+		world_up(up)
 	{
 		updateCameraAxes();
 		glfwSetKeyCallback(win_handle->getHandle(), key_callback);
@@ -159,11 +161,11 @@ public:
 		m_yaw   += static_cast<float>((last->x - m_firstPos.x) * MOUSE_SENSITIVITY) * PLAYER_NOT_EXIT;
 		m_firstPos = *last;
 
-		m_pitch = clamp(m_pitch, -89.9f, 89.9f);
-		m_yaw   = clamp(m_yaw  , -74.9f, 74.9f);
+		m_pitch = glm::clamp(m_pitch, -89.9f, 89.9f);
+		m_yaw   = glm::clamp(m_yaw  , -74.9f, 74.9f);
 		updateCameraAxes();
 
-		vec3 tmp{ m_vel * win_handle->dt };
+		glm::vec3 tmp{ m_vel * win_handle->dt };
 		switch (CURRENT_KEYSTROKE)
 		{
 		case MOVEMENT_KEY::NONE:								 break;
@@ -175,34 +177,32 @@ public:
 		case MOVEMENT_KEY::F: tmp *= m_up	  ; position -= tmp; break;
 		}
 
-		add(&position, &m_forward, &tmp);
-		lookAt(position, tmp, m_up, &CameraTransform);
-		perspective(Near, Far, win_handle->Width() / win_handle->Height(), fov, &ProjectionMatrix);
+
+		tmp = position + m_forward;
+		CameraTransform  = glm::lookAt(position, tmp, m_up);
+		ProjectionMatrix = glm::perspective(fov, win_handle->Width() / win_handle->Height(), Near, Far);
 	}
 
-	mat4* getView()
+	glm::mat4x4& getView()
 	{
-		return &CameraTransform;
+		return CameraTransform;
 	}
 
-	mat4* getProjection()
+	glm::mat4x4& getProjection()
 	{
-		return &ProjectionMatrix;
+		return ProjectionMatrix;
 	}
 private:
 	void updateCameraAxes()
 	{
-		m_forward.set(
-			fcos(m_yaw) * fcos(m_pitch),
-			fsin(m_pitch),
-			fsin(m_yaw) * fcos(m_pitch)
-		); 
-		m_forward = m_forward.normalize();
+		m_forward = glm::normalize(glm::vec3{
+			glm::cos(m_yaw) * glm::cos(m_pitch),
+			glm::sin(m_pitch),
+			glm::sin(m_yaw) * glm::cos(m_pitch)
+		});
 
-		m_forward.cross(world_up, &m_right);
-		m_right = m_right.normalize();
-
-		m_right.cross(m_forward, &m_up);
-		m_up = m_up.normalize();
+		m_right = glm::normalize(glm::cross(m_forward, world_up));
+		m_up 	= glm::normalize(glm::cross(m_right, m_forward));
+		return;
 	}
 };

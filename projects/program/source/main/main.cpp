@@ -1,5 +1,5 @@
 #ifndef _SELECT_MAIN
-#   define _SELECT_MAIN 0
+#   define _SELECT_MAIN 1
 #endif
 
 
